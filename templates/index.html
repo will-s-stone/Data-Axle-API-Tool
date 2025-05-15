@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Axle API Tool</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1, h2, h3 {
+            color: #2c3e50;
+        }
+
+        .section {
+            background: #f8f9fa;
+            border-radius: 5px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 5px;
+        }
+
+        .btn:hover {
+            background: #2980b9;
+        }
+
+        .btn-secondary {
+            background: #95a5a6;
+        }
+
+        .btn-secondary:hover {
+            background: #7f8c8d;
+        }
+
+        .btn-success {
+            background: #2ecc71;
+        }
+
+        .btn-success:hover {
+            background: #27ae60;
+        }
+
+        .folder-item {
+            margin: 5px 0;
+        }
+
+        .flash-message {
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+        }
+
+        .success {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+
+        .error {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+
+        .upload-area {
+            border: 2px dashed #3498db;
+            border-radius: 5px;
+            padding: 25px;
+            text-align: center;
+            margin-bottom: 20px;
+            transition: all 0.3s;
+        }
+
+        .upload-area.dragover {
+            background: #e3f2fd;
+        }
+
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border: 1px solid #ddd;
+            border-radius: 4px 4px 0 0;
+            margin-right: 5px;
+        }
+
+        .tab.active {
+            background: #3498db;
+            color: white;
+            border-color: #3498db;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        table th, table td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        table th {
+            background-color: #f2f2f2;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Data Axle API Tool</h1>
+
+        <!-- File Upload Section -->
+        <div class="section" id="upload-section">
+            <h2>Upload File</h2>
+            <div class="upload-area" id="upload-area">
+                <p>Drag and drop your KMZ or KML file here</p>
+                <p>or</p>
+                <input type="file" id="file-input" accept=".kmz,.kml" style="display: none;">
+                <button class="btn" onclick="document.getElementById('file-input').click()">Select File</button>
+            </div>
+            <div id="upload-status"></div>
+        </div>
+
+        <!-- Workflow Selection Section -->
+        <div class="section hidden" id="workflow-section">
+            <h2>Select Workflow</h2>
+            <div class="tabs">
+                <div class="tab active" data-workflow="business">Business Records</div>
+                <div class="tab" data-workflow="consumer">Consumer Records</div>
+                <div class="tab" data-workflow="insights">Area Insights</div>
+            </div>
+            <div class="workflow-content" id="workflow-content">
+                <div id="business-workflow">
+                    <p>Get business records from Data Axle for the selected folders.</p>
+                </div>
+                <div id="consumer-workflow" class="hidden">
+                    <p>Get consumer records from Data Axle for the selected folders.</p>
+                    <p>
+                        <input type="checkbox" id="head-of-household" checked>
+                        <label for="head-of-household">Only include head of household</label>
+                    </p>
+                </div>
+                <div id="insights-workflow" class="hidden">
+                    <p>Get demographic insights and statistics for the selected folders.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Folder Selection Section -->
+        <div class="section hidden" id="folder-section">
+            <h2>Select Folders</h2>
+            <div>
+                <button class="btn btn-secondary" id="select-all-btn">Select All</button>
+                <button class="btn btn-secondary" id="deselect-all-btn">Deselect All</button>
+                <div style="margin-top: 10px;">
+                    <input type="text" id="folder-search" placeholder="Search folders..." style="padding: 6px; width: 200px;">
+                </div>
+            </div>
+            <div id="folders-container" style="margin-top: 15px; max-height: 300px; overflow-y: auto;">
+                <!-- Folders will be added here dynamically -->
+            </div>
+            <div style="margin-top: 20px;">
+                <button class="btn btn-success" id="get-data-btn">Get Data</button>
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        <div class="section hidden" id="results-section">
+            <h2>Results</h2>
+            <div id="results-info"></div>
+            <div id="results-container" style="margin-top: 15px; max-height: 500px; overflow-y: auto;"></div>
+            <div style="margin-top: 20px;">
+                <button class="btn" id="export-csv-btn">Export to CSV</button>
+                <button class="btn" id="export-kml-btn">Export to KML</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let currentWorkflow = 'business';
+        let uploadedFileName = '';
+        let resultData = [];
+
+        // DOM Elements
+        const uploadArea = document.getElementById('upload-area');
+        const fileInput = document.getElementById('file-input');
+        const uploadStatus = document.getElementById('upload-status');
+        const workflowSection = document.getElementById('workflow-section');
+        const folderSection = document.getElementById('folder-section');
+        const resultsSection = document.getElementById('results-section');
+        const tabButtons = document.querySelectorAll('.tab');
+        const workflowContents = document.querySelectorAll('#workflow-content > div');
+        const foldersContainer = document.getElementById('folders-container');
+        const selectAllBtn = document.getElementById('select-all-btn');
+        const deselectAllBtn = document.getElementById('deselect-all-btn');
+        const folderSearch = document.getElementById('folder-search');
+        const getDataBtn = document.getElementById('get-data-btn');
+        const exportCsvBtn = document.getElementById('export-csv-btn');
+        const exportKmlBtn = document.getElementById('export-kml-btn');
+        const resultsInfo = document.getElementById('results-info');
+        const resultsContainer = document.getElementById('results-container');
+
+        // Set up event listeners
+        fileInput.addEventListener('change', handleFileUpload);
+
+        tabButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const workflow = button.dataset.workflow;
+                setActiveWorkflow(workflow);
+            });
+        });
+
+        uploadArea.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            this.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', function() {
+            this.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', function(e) {
+            e.preventDefault();
+            this.classList.remove('dragover');
+
+            if (e.dataTransfer.files.length) {
+                fileInput.files = e.dataTransfer.files;
+                handleFileUpload();
+            }
+        });
+
+        selectAllBtn.addEventListener('click', () => {
+            const checkboxes = document.querySelectorAll('input[name="selected_folders"]');
+            checkboxes.forEach(checkbox => checkbox.checked = true);
+        });
+
+        deselectAllBtn.addEventListener('click', () => {
+            const checkboxes = document.querySelectorAll('input[name="selected_folders"]');
+            checkboxes.forEach(checkbox => checkbox.checked = false);
+        });
+
+        folderSearch.addEventListener('input', () => {
+            const searchTerm = folderSearch.value.toLowerCase();
+            const folderItems = document.querySelectorAll('.folder-item');
+
+            folderItems.forEach(item => {
+                const folderName = item.querySelector('label').textContent.toLowerCase();
+                if (folderName.includes(searchTerm)) {
+                    item.style.display = 'block';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        });
+
+        getDataBtn.addEventListener('click', getData);
+        exportCsvBtn.addEventListener('click', exportCSV);
+        exportKmlBtn.addEventListener('click', exportKML);
+
+        // Functions
+        function handleFileUpload() {
+            if (!fileInput.files.length) return;
+
+            const file = fileInput.files[0];
+            const fileExtension = file.name.split('.').pop().toLowerCase();
+
+            if (!['kmz', 'kml'].includes(fileExtension)) {
+                showError('Please select a KMZ or KML file.');
+                return;
+            }
+
+            // Create FormData object
+            const formData = new FormData();
+            formData.append('geo_file', file);
+
+            // Update UI
+            uploadStatus.innerHTML = '<div class="flash-message">Uploading and processing file...</div>';
+
+            // Send the file to the server
+            fetch('/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    uploadedFileName = data.filename;
+                    showSuccess(`File ${data.filename} uploaded and processed successfully! Found ${data.polygon_count} polygons.`);
+                    workflowSection.classList.remove('hidden');
+                    loadFolders();
+                } else {
+                    showError(data.message);
+                }
+            })
+            .catch(error => {
+                showError(`Error: ${error.message}`);
+            });
+        }
+
+        function loadFolders() {
+            fetch('/get_folders')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.folders && data.folders.length > 0) {
+                        folderSection.classList.remove('hidden');
+                        foldersContainer.innerHTML = '';
+
+                        data.folders.forEach((folder, index) => {
+                            const folderDiv = document.createElement('div');
+                            folderDiv.className = 'folder-item';
+
+                            const checkbox = document.createElement('input');
+                            checkbox.type = 'checkbox';
+                            checkbox.id = `folder-${index}`;
+                            checkbox.name = 'selected_folders';
+                            checkbox.value = folder;
+                            checkbox.checked = true;
+
+                            const label = document.createElement('label');
+                            label.htmlFor = `folder-${index}`;
+                            label.textContent = folder;
+
+                            folderDiv.appendChild(checkbox);
+                            folderDiv.appendChild(label);
+                            foldersContainer.appendChild(folderDiv);
+                        });
+                    } else {
+                        if (!data.success) {
+                            showError(data.message);
+                        } else {
+                            showError('No folders found in the file.');
+                        }
+                    }
+                })
+                .catch(error => {
+                    showError(`Error loading folders: ${error.message}`);
+                });
+        }
+
+        function setActiveWorkflow(workflow) {
+            currentWorkflow = workflow;
+
+            // Update tabs
+            tabButtons.forEach(button => {
+                if (button.dataset.workflow === workflow) {
+                    button.classList.add('active');
+                } else {
+                    button.classList.remove('active');
+                }
+            });
+
+            // Update content
+            workflowContents.forEach(content => {
+                if (content.id === `${workflow}-workflow`) {
+                    content.classList.remove('hidden');
+                } else {
+                    content.classList.add('hidden');
+                }
+            });
+
+            // Send to server
+            fetch('/set_workflow', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ workflow: workflow })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (!data.success) {
+                    showError(data.message);
+                }
+            })
+            .catch(error => {
+                showError(`Error setting workflow: ${error.message}`);
+            });
+
+            // Reset results
+            resultsSection.classList.add('hidden');
+            resultsInfo.textContent = '';
+            resultsContainer.innerHTML = '';
+            resultData = [];
+        }
+
+        function getData() {
+            // Get selected folders
+            const selectedFolders = Array.from(
+                document.querySelectorAll('input[name="selected_folders"]:checked')
+            ).map(checkbox => checkbox.value);
+
+            if (selectedFolders.length === 0) {
+                showError('Please select at least one folder');
+                return;
+            }
+
+            // Show loading
+            resultsInfo.innerHTML = '<div class="flash-message">Loading data...</div>';
+            resultsSection.classList.remove('hidden');
+            resultsContainer.innerHTML = '';
+
+            // Determine endpoint based on current workflow
+            let endpoint;
+            let requestData = { folders: selectedFolders };
+
+            if (currentWorkflow === 'business') {
+                endpoint = '/get_businesses';
+            } else if (currentWorkflow === 'consumer') {
+                endpoint = '/get_consumers';
+                requestData.head_of_household = document.getElementById('head-of-household').checked;
+            } else if (currentWorkflow === 'insights') {
+                endpoint = '/get_insights';
+            }
+
+            // Make the request
+            fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(requestData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Store the result data
+                    if (currentWorkflow === 'business') {
+                        resultData = data.businesses;
+                        displayBusinessData(data.businesses);
+                    } else if (currentWorkflow === 'consumer') {
+                        resultData = data.consumers;
+                        displayConsumerData(data.consumers);
+                    } else if (currentWorkflow === 'insights') {
+                        resultData = data.insights;
+                        displayInsightsData(data.insights);
+                    }
+                } else {
+                    showError(data.message);
+                }
+            })
+            .catch(error => {
+                showError(`Error getting data: ${error.message}`);
+            });
+        }
+
+        function displayBusinessData(businesses) {
+            if (!businesses || businesses.length === 0) {
+                resultsInfo.innerHTML = '<div class="flash-message">No businesses found.</div>';
+                return;
+            }
+
+            resultsInfo.innerHTML = `<div class="flash-message success">Found ${businesses.length} businesses</div>`;
+
+            // Create a table for the data
+            const table = document.createElement('table');
+            const headerRow = document.createElement('tr');
+
+            // Determine which fields to display (subset for better UI)
+            const displayFields = ['name', 'street', 'city', 'state', 'postal_code', 'phone', 'source_folder', 'source_polygon'];
+
+            // Add headers
+            displayFields.forEach(field => {
+                const th = document.createElement('th');
+                th.textContent = field.charAt(0).toUpperCase() + field.slice(1).replace(/_/g, ' ');
+                headerRow.appendChild(th);
+            });
+
+            table.appendChild(headerRow);
+
+            // Add rows
+            businesses.slice(0, 100).forEach(business => {
+                const row = document.createElement('tr');
+
+                displayFields.forEach(field => {
+                    const td = document.createElement('td');
+                    td.textContent = business[field] || '';
+                    row.appendChild(td);
+                });
+
+                table.appendChild(row);
+            });
+
+            resultsContainer.innerHTML = '';
+            resultsContainer.appendChild(table);
+
+            // Show truncation message if needed
+            if (businesses.length > 100) {
+                const message = document.createElement('p');
+                message.textContent = `Showing 100 of ${businesses.length} businesses. Export to CSV to see all results.`;
+                resultsContainer.appendChild(message);
+            }
+        }
+
+        function displayConsumerData(consumers) {
+            if (!consumers || consumers.length === 0) {
+                resultsInfo.innerHTML = '<div class="flash-message">No consumers found.</div>';
+                return;
+            }
+
+            resultsInfo.innerHTML = `<div class="flash-message success">Found ${consumers.length} consumers</div>`;
+
+            // Create a table for the data
+            const table = document.createElement('table');
+            const headerRow = document.createElement('tr');
+
+            // Determine which fields to display (subset for better UI)
+            const displayFields = ['name', 'first_name', 'last_name', 'street', 'city', 'state', 'postal_code', 'source_folder', 'source_polygon'];
+
+            // Add headers
+            displayFields.forEach(field => {
+                const th = document.createElement('th');
+                th.textContent = field.charAt(0).toUpperCase() + field.slice(1).replace(/_/g, ' ');
+                headerRow.appendChild(th);
+            });
+
+            table.appendChild(headerRow);
+
+            // Add rows
+            consumers.slice(0, 100).forEach(consumer => {
+                const row = document.createElement('tr');
+
+                displayFields.forEach(field => {
+                    const td = document.createElement('td');
+                    td.textContent = consumer[field] || '';
+                    row.appendChild(td);
+                });
+
+                table.appendChild(row);
+            });
+
+            resultsContainer.innerHTML = '';
+            resultsContainer.appendChild(table);
+
+            // Show truncation message if needed
+            if (consumers.length > 100) {
+                const message = document.createElement('p');
+                message.textContent = `Showing 100 of ${consumers.length} consumers. Export to CSV to see all results.`;
+                resultsContainer.appendChild(message);
+            }
+        }
+
+        function displayInsightsData(insights) {
+            if (!insights || insights.length === 0) {
+                resultsInfo.innerHTML = '<div class="flash-message">No insights found.</div>';
+                return;
+            }
+
+            resultsInfo.innerHTML = `<div class="flash-message success">Found insights for ${insights.length} polygons</div>`;
+
+            // Create a container for each polygon's insights
+            const insightsContainer = document.createElement('div');
+
+            insights.forEach(item => {
+                const polygonDiv = document.createElement('div');
+                polygonDiv.style.marginBottom = '20px';
+                polygonDiv.style.padding = '10px';
+                polygonDiv.style.border = '1px solid #ddd';
+                polygonDiv.style.borderRadius = '5px';
+
+                // Add polygon name and folder
+                const header = document.createElement('h3');
+                header.textContent = `${item.polygon_name} (${item.folder})`;
+                polygonDiv.appendChild(header);
+
+                // Add affluence score
+                const scoreDiv = document.createElement('div');
+                scoreDiv.innerHTML = `<strong>Affluence Score:</strong> ${item.affluence_score}`;
+                polygonDiv.appendChild(scoreDiv);
+
+                // Add key metrics
+                const metricsDiv = document.createElement('div');
+                metricsDiv.style.marginTop = '10px';
+                metricsDiv.innerHTML = `
+                    <p><strong>Household Count:</strong> ${item.insights.household_count || 0}</p>
+                    <p><strong>Business Count:</strong> ${item.insights.business_count || 0}</p>
+                `;
+                polygonDiv.appendChild(metricsDiv);
+
+                // Add home ownership data if available
+                if (item.insights.home_ownership_rate &&
+                    item.insights.home_ownership_rate.insights &&
+                    item.insights.home_ownership_rate.insights.frequencies) {
+
+                    const homeOwnershipDiv = document.createElement('div');
+                    homeOwnershipDiv.style.marginTop = '10px';
+                    homeOwnershipDiv.innerHTML = '<strong>Home Ownership:</strong>';
+
+                    const ownershipList = document.createElement('ul');
+
+                    item.insights.home_ownership_rate.insights.frequencies.forEach(freq => {
+                        const li = document.createElement('li');
+                        li.textContent = `${freq.value ? 'Owners' : 'Non-Owners'}: ${freq.count || 0}`;
+                        ownershipList.appendChild(li);
+                    });
+
+                    homeOwnershipDiv.appendChild(ownershipList);
+                    polygonDiv.appendChild(homeOwnershipDiv);
+                }
+
+                insightsContainer.appendChild(polygonDiv);
+            });
+
+            resultsContainer.innerHTML = '';
+            resultsContainer.appendChild(insightsContainer);
+        }
+
+        function exportCSV() {
+            if (!resultData || resultData.length === 0) {
+                showError('No data to export');
+                return;
+            }
+
+            let endpoint;
+            let requestData;
+
+            if (currentWorkflow === 'business') {
+                endpoint = '/export_businesses_csv';
+                requestData = { businesses: resultData };
+            } else if (currentWorkflow === 'consumer') {
+                endpoint = '/export_consumers_csv';
+                requestData = { consumers: resultData };
+            } else if (currentWorkflow === 'insights') {
+                endpoint = '/export_insights_csv';
+                requestData = { insights: resultData };
+            }
+
+            fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(requestData)
+            })
+            .then(response => {
+                if (response.ok) {
+                    return response.blob();
+                } else {
+                    return response.json().then(data => {
+                        throw new Error(data.message || 'Error exporting data');
+                    });
+                }
+            })
+            .then(blob => {
+                // Create a download link and click it
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+                a.href = url;
+                a.download = `${currentWorkflow}_export_${timestamp}.csv`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                a.remove();
+            })
+            .catch(error => {
+                showError(`Error exporting to CSV: ${error.message}`);
+            });
+        }
+
+        function exportKML() {
+            if (!resultData || resultData.length === 0) {
+                showError('No data to export');
+                return;
+            }
+
+            fetch('/export_kml', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    workflow: currentWorkflow,
+                    data: resultData
+                })
+            })
+            .then(response => {
+                if (response.ok) {
+                    return response.blob();
+                } else {
+                    return response.json().then(data => {
+                        throw new Error(data.message || 'Error exporting data');
+                    });
+                }
+            })
+            .then(blob => {
+                // Create a download link and click it
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+                a.href = url;
+                a.download = `${currentWorkflow}_export_${timestamp}.kml`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                a.remove();
+            })
+            .catch(error => {
+                showError(`Error exporting to KML: ${error.message}`);
+            });
+        }
+
+        // Utility functions
+        function showError(message) {
+            uploadStatus.innerHTML = `<div class="flash-message error">${message}</div>`;
+        }
+
+        function showSuccess(message) {
+            uploadStatus.innerHTML = `<div class="flash-message success">${message}</div>`;
+        }
+    </script>
+</body>
+</html>
